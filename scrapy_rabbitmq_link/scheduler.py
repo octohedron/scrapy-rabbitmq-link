@@ -47,6 +47,12 @@ class Scheduler(object):
         return instance
 
     def open(self, spider):
+        spdir = dir(spider)
+        if  '_modify_request' not in spdir:
+            raise NotImplementedError('Spider must contain _modify_request(self, request) method.\nNow contains : %s' % str(spdir))
+        if  '_callback' not in spdir:
+            raise NotImplementedError('Spider must contain _callback(self, response) method.\nNow contains : %s' % str(spdir))
+
         self.spider = spider
         self.queue = self.queue_cls(self.server, spider, self.queue_key)
         self.df = BaseDupeFilter()
