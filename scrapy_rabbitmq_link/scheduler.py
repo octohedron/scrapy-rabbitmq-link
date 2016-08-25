@@ -1,5 +1,6 @@
 __author__ = 'mbriliauskas'
 
+import logging
 import connection
 
 from scrapy.http import Request
@@ -10,7 +11,7 @@ from scrapy.dupefilters import BaseDupeFilter
 SCHEDULER_PERSIST = True
 SCHEDULER_QUEUE_KEY = '%(spider)s'
 SCHEDULER_QUEUE_CLASS = 'scrapy_rabbitmq_link.queue.SpiderQueue'
-SCHEDULER_ENABLE_QUEUE_PUSHING = False
+SCHEDULER_QUEUE_PUSHING = True
 SCHEDULER_IDLE_BEFORE_CLOSE = 0
 
 class Scheduler(object):
@@ -36,7 +37,7 @@ class Scheduler(object):
         queue_key = settings.get('SCHEDULER_QUEUE_KEY', SCHEDULER_QUEUE_KEY)
         queue_cls = load_object(settings.get('SCHEDULER_QUEUE_CLASS', SCHEDULER_QUEUE_CLASS))
         idle_before_close = settings.get('SCHEDULER_IDLE_BEFORE_CLOSE', SCHEDULER_IDLE_BEFORE_CLOSE)
-        queue_pushing = settings.get('SCHEDULER_ENABLE_QUEUE_PUSHING', SCHEDULER_ENABLE_QUEUE_PUSHING)
+        queue_pushing = settings.get('SCHEDULER_QUEUE_PUSHING', SCHEDULER_QUEUE_PUSHING)
         connected = connection.from_settings(settings)
         return cls(connected, persist, queue_key, queue_cls, idle_before_close, queue_pushing)
 
@@ -61,7 +62,7 @@ class Scheduler(object):
             self.idle_before_close = 0
 
         if len(self.queue):
-            spider.log("Resuming crawl (%d urls scheduled)" % len(self.queue))
+            logging.info("[Scheduler] Resuming crawling (%d urls scheduled)" % len(self.queue))
 
     def close(self, reason):
         if  not self.persist:
@@ -72,6 +73,7 @@ class Scheduler(object):
             if  self.stats:
                 self.stats.inc_value('scheduler/enqueued/rabbitmq', spider=self.spider)
             self.queue.push(url)
+	    return True
 
     def next_request(self):
         """ Creates and returns a request to fire
