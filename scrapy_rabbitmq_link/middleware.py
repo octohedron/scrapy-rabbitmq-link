@@ -41,7 +41,7 @@ class RabbitMQMiddleware(object):
             logging.info('Unacked (%(status)d): %(url)s',
 		        {'url': request.url, 'status': response.status})
             self.inc_stat('unacked', spider)
-            return response
+        return response
 
 def is_a_picture(request):
     return request.url.endswith('.jpg')
