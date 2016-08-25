@@ -1,5 +1,4 @@
 import sys, os
-import scrapy_rabbitmq_link
 
 try:
     from setuptools import setup
@@ -8,7 +7,7 @@ except ImportError:
 
 from codecs import open
 
-if sys.argv[-1] == 'publish':
+if  sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
     sys.exit()
 
@@ -18,14 +17,14 @@ packages = [
 
 requires = [
     'pika',
-    'Scrapy>=0.14'
+    'Scrapy>=1.0'
 ]
 
 setup(
     name='scrapy-rabbitmq-link',
     author='Mantas Briliauskas',
     description='RabbitMQ Plug-in for Scrapy',
-    version='0.1.0',
+    version='0.0.3',
     author_email='m.briliauskas@gmail.com',
     license='MIT',
     url='https://github.com/mbriliauskas/scrapy-rabbitmq-link',
