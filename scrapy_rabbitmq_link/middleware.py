@@ -16,32 +16,55 @@ class RabbitMQMiddleware(object):
         return RabbitMQMiddleware(settings)
 
     def ensure_init(self, spider):
-	if  self.init:
-	    self.server = spider.crawler.engine.slot.scheduler.queue.server
-	    self.stats = spider.crawler.stats
-	    self.init = False
+        if  self.init:
+            self.spider = spider
+            self.queue = spider.crawler.engine.slot.scheduler.queue
+            self.server = self.queue.server
+            self.stats = spider.crawler.stats
+            self.init = False
 
-    def inc_stat(self, stat, spider):
+    def inc_stat(self, stat):
 	    self.stats.inc_value('scheduler/acking/%(stat)s/rabbitmq' % {'stat': stat},
-		    spider=spider)
+            spider=self.spider)
 
     def process_response(self, request, response, spider):
         self.ensure_init(spider)
-
-        if  response.status in self.ack_status and not is_a_picture(request):
-            self.server.basic_ack(delivery_tag=request.meta.get('delivery_tag'))
-            logging.info('Acked (%(status)d): %(url)s' %
-		        {'url': request.url, 'status': response.status})
-            self.inc_stat('acked', spider)
-        elif is_a_picture(request):
-            logging.info('Picture (%(status)d): %(url)s',
-		        {'url': request.url, 'status': response.status})
-            self.inc_stat('picture', spider)
+        ack = response.status in self.ack_status
+        if  ack and not is_a_picture(response):
+            self.ack_message(request, response)
+        elif is_a_picture(response):
+            self.process_picture(response)
         else:
-            logging.info('Unacked (%(status)d): %(url)s',
-		        {'url': request.url, 'status': response.status})
-            self.inc_stat('unacked', spider)
+            self.requeue_message(request, response)
         return response
 
-def is_a_picture(request):
-    return request.url.endswith('.jpg')
+    def ack_message(self, request, response):
+        if  self.check_delivery_tag(request):
+            delivery_tag = request.meta.get('delivery_tag')
+            self.server.basic_ack(delivery_tag=delivery_tag)
+            logging.info('Acked (%(status)d): %(url)s' %
+                {'url': response.url, 'status': response.status})
+            self.inc_stat('acked')
+
+    def check_delivery_tag(self, request):
+        if  'delivery_tag' not in request.meta:
+            logging.error('Request %(request)s does not have a deliver tag.' %
+                {'request': request})
+        return 'delivery_tag' in request.meta
+
+    def process_picture(self, response):
+        logging.info('Picture (%(status)d): %(url)s',
+            {'url': response.url, 'status': response.status})
+        self.inc_stat('picture')
+
+    def requeue_message(self, request, response):
+        if  self.check_delivery_tag(request):
+            delivery_tag = request.meta.get('delivery_tag')
+            self.server.basic_ack(delivery_tag=delivery_tag)
+            self.queue.push(response.url)
+            logging.info('Requeued (%(status)d): %(url)s',
+                {'url': response.url, 'status': response.status})
+            self.inc_stat('requeued')
+
+def is_a_picture(response):
+    return response.url.endswith('.jpg')
