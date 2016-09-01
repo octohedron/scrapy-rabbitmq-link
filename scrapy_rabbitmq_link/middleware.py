@@ -7,7 +7,7 @@ class RabbitMQMiddleware(object):
     """ Middleware used to acknowledge successful messages
     """
 
-    def __init__(self, settings): 
+    def __init__(self, settings):
         self.ack_status = settings.get('RABBITMQ_ACKNOWLEDGE_ON_RESPONSE_STATUS', RABBITMQ_ACKNOWLEDGE_ON_RESPONSE_STATUS)
         self.init = True
 
@@ -67,4 +67,5 @@ class RabbitMQMiddleware(object):
             self.inc_stat('requeued')
 
 def is_a_picture(response):
-    return response.url.endswith('.jpg')
+    picture_exts = ['.png', '.jpg']
+    return any([response.url.endswith(ext) for ext in picture_exts])
