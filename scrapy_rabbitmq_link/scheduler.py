@@ -72,8 +72,8 @@ class Scheduler(object):
         if  self.queue_pushing:
             if  self.stats:
                 self.stats.inc_value('scheduler/enqueued/rabbitmq', spider=self.spider)
-            self.queue.push(url)
-	    return True
+            self.queue.push(request.url)
+        return True
 
     def next_request(self):
         """ Creates and returns a request to fire
