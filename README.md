@@ -65,7 +65,7 @@ class CustomSpider(Spider):
     # modify a request before firing. request already contains url received from RabbitMQ
     def _modify_request(self, request):
         request.meta['time'] = time()
-        yield request
+        return request
 
     # callback to the response received
     def _callback(self, response):
