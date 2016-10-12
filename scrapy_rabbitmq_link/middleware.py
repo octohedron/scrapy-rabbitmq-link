@@ -19,29 +19,28 @@ class RabbitMQMiddleware(object):
         if  self.init:
             self.spider = spider
             self.queue = spider.crawler.engine.slot.scheduler.queue
-            self.server = self.queue.server
             self.stats = spider.crawler.stats
             self.init = False
 
     def inc_stat(self, stat):
-	    self.stats.inc_value('scheduler/acking/%(stat)s/rabbitmq' % {'stat': stat},
+            self.stats.inc_value('scheduler/acking/%(stat)s/rabbitmq' % {'stat': stat},
             spider=self.spider)
 
     def process_response(self, request, response, spider):
         self.ensure_init(spider)
         ack = response.status in self.ack_status
         if  ack and not is_a_picture(response):
-            self.ack_message(request, response)
+            self.ack_response(request, response)
         elif is_a_picture(response):
             self.process_picture(response)
         else:
             self.requeue_message(request, response)
         return response
 
-    def ack_message(self, request, response):
+    def ack_response(self, request, response):
         if  self.check_delivery_tag(request):
             delivery_tag = request.meta.get('delivery_tag')
-            self.server.basic_ack(delivery_tag=delivery_tag)
+            self.queue.ack(delivery_tag)
             logging.info('Acked (%(status)d): %(url)s' %
                 {'url': response.url, 'status': response.status})
             self.inc_stat('acked')
@@ -60,8 +59,8 @@ class RabbitMQMiddleware(object):
     def requeue_message(self, request, response):
         if  self.check_delivery_tag(request):
             delivery_tag = request.meta.get('delivery_tag')
-            self.server.basic_ack(delivery_tag=delivery_tag)
             self.queue.push(response.url)
+            self.queue.basic_ack(delivery_tag=delivery_tag)
             logging.info('Requeued (%(status)d): %(url)s',
                 {'url': response.url, 'status': response.status})
             self.inc_stat('requeued')

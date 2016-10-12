@@ -1,5 +1,6 @@
 __author__ = 'mbriliauskas'
 
+import sys
 import logging
 import connection
 
@@ -18,15 +19,15 @@ class Scheduler(object):
     """ A RabbitMQ Scheduler for Scrapy.
     """
 
-    def __init__(self, connected, persist, queue_key, queue_cls, idle_before_close, queue_pushing, *args, **kwargs):
+    def __init__(self, connection_url, persist, queue_key, queue_cls,
+                 idle_before_close, queue_pushing, *args, **kwargs):
         self.queue_key = queue_key
-        self.connected = connected
         self.persist = persist
         self.queue_cls = queue_cls
         self.idle_before_close = idle_before_close
         self.stats = None
         self.queue_pushing = queue_pushing
-        self.server = connection.channel(connected, queue_key % {'spider':'member_page'})
+        self.connection_url = connection_url
 
     def __len__(self):
         return len(self.queue)
@@ -35,11 +36,18 @@ class Scheduler(object):
     def from_settings(cls, settings):
         persist = settings.get('SCHEDULER_PERSIST', SCHEDULER_PERSIST)
         queue_key = settings.get('SCHEDULER_QUEUE_KEY', SCHEDULER_QUEUE_KEY)
-        queue_cls = load_object(settings.get('SCHEDULER_QUEUE_CLASS', SCHEDULER_QUEUE_CLASS))
-        idle_before_close = settings.get('SCHEDULER_IDLE_BEFORE_CLOSE', SCHEDULER_IDLE_BEFORE_CLOSE)
-        queue_pushing = settings.get('SCHEDULER_QUEUE_PUSHING', SCHEDULER_QUEUE_PUSHING)
-        connected = connection.from_settings(settings)
-        return cls(connected, persist, queue_key, queue_cls, idle_before_close, queue_pushing)
+        queue_cls = load_object(settings.get('SCHEDULER_QUEUE_CLASS',
+                SCHEDULER_QUEUE_CLASS))
+        idle_before_close = settings.get('SCHEDULER_IDLE_BEFORE_CLOSE',
+                SCHEDULER_IDLE_BEFORE_CLOSE)
+        queue_pushing = settings.get('SCHEDULER_QUEUE_PUSHING',
+                SCHEDULER_QUEUE_PUSHING)
+        if not settings.get('RABBITMQ_CONNECTION_PARAMETERS'):
+            msg = 'Please set "RABBITMQ_CONNECTION_PARAMETERS" at settings.'
+            raise NotImplementedError(msg)
+        connection_url = settings.get('RABBITMQ_CONNECTION_PARAMETERS')
+        return cls(connection_url, persist, queue_key, queue_cls,
+                   idle_before_close, queue_pushing)
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -50,12 +58,16 @@ class Scheduler(object):
     def open(self, spider):
         spdir = dir(spider)
         if  '_modify_request' not in spdir:
-            raise NotImplementedError('Spider must contain _modify_request(self, request) method.\nNow contains : %s' % str(spdir))
+            msg  = 'Spider must contain _modify_request(self, request) method.'
+            msg += '\nNow contains : %s' % str(spdir)
+            raise NotImplementedError(msg)
         if  '_callback' not in spdir:
-            raise NotImplementedError('Spider must contain _callback(self, response) method.\nNow contains : %s' % str(spdir))
+            msg  = 'Spider must contain _callback(self, response) method.'
+            msg += '\nNow contains : %s' % str(spdir)
+            raise NotImplementedError(msg)
 
         self.spider = spider
-        self.queue = self.queue_cls(self.server, spider, self.queue_key)
+        self.queue = self.queue_cls(self.connection_url, spider, self.queue_key)
         self.df = BaseDupeFilter()
 
         if self.idle_before_close < 0:
