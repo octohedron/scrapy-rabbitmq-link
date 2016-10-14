@@ -60,7 +60,7 @@ class RabbitMQMiddleware(object):
         if  self.check_delivery_tag(request):
             delivery_tag = request.meta.get('delivery_tag')
             self.queue.push(response.url)
-            self.queue.basic_ack(delivery_tag=delivery_tag)
+            self.queue.ack(delivery_tag=delivery_tag)
             logging.info('Requeued (%(status)d): %(url)s',
                 {'url': response.url, 'status': response.status})
             self.inc_stat('requeued')
