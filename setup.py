@@ -24,7 +24,7 @@ setup(
     name='scrapy-rabbitmq-link',
     author='Mantas Briliauskas',
     description='RabbitMQ Plug-in for Scrapy',
-    version='0.0.7',
+    version='0.0.8',
     author_email='m.briliauskas@gmail.com',
     license='MIT',
     url='https://github.com/mbriliauskas/scrapy-rabbitmq-link',
