@@ -1,6 +1,7 @@
 # system packages
 import sys
 import time
+import pika
 import logging
 from scrapy.http import Request
 
@@ -10,22 +11,12 @@ import connection
 logger = logging.getLogger(__name__)
 
 
-class Base(object):
+class IQueue(object):
     """Per-spider queue/stack base class"""
 
-    def __init__(self, connection_url, spider, key, exchange=None):
-        """Initialize per-spider RabbitMQ queue.
-
-        Parameters:
-            connection_url -- rabbitmq connection url
-            spider -- scrapy spider instance
-            key -- key for this queue (e.g. "%(spider)s")
-        """
-        self.spider = spider
-        self.key = key % {'spider': spider.name}
-        self.connection_url = connection_url
-        self.server = None
-        self.connect()
+    def __init__(self):
+        """Init method"""
+        raise NotImplementedError
 
     def __len__(self):
         """Return the length of the queue"""
@@ -41,20 +32,25 @@ class Base(object):
 
     def clear(self):
         """Clear queue/stack"""
-        self.channel.queue_purge(self.key)
+        raise NotImplementedError
 
-    def connect(self):
-        """Make a connection"""
-        if self.server:
-            try:
-                self.server.close()
-            except:
-                pass
-        self.server = connection.connect(self.connection_url)
-        self.channel = connection.get_channel(self.server, self.key)
 
-class SpiderQueue(Base):
+class RabbitMQQueue(IQueue):
     """Per-spider FIFO queue"""
+
+    def __init__(self, connection_url, spider, key, exchange=None):
+        """Initialize per-spider RabbitMQ queue.
+
+        Parameters:
+            connection_url -- rabbitmq connection url
+            spider -- scrapy spider instance
+            key -- rabbitmq routing key
+        """
+        self.spider = spider
+        self.key = key
+        self.connection_url = connection_url
+        self.server = None
+        self.connect()
 
     def __len__(self):
         """Return the length of the queue"""
@@ -79,28 +75,40 @@ class SpiderQueue(Base):
         return wrapper
 
     @_try_operation
-    def basic_get(self, queue):
-        return self.channel.basic_get(queue=queue)
+    def pop(self):
+        """Pop a message"""
+        return self.channel.basic_get(queue=self.key)
 
     @_try_operation
     def ack(self, delivery_tag):
+        """Ack a message"""
         self.channel.basic_ack(delivery_tag=delivery_tag)
 
     @_try_operation
-    def push(self, url):
-        """Push an url"""
+    def push(self, body, headers=None):
+        """Push a message"""
+        properties = None
+        if  headers:
+            properties = pika.BasicProperties(headers=headers)
         self.channel.basic_publish(
             exchange='',
             routing_key=self.key,
-            body=url
+            body=body,
+            properties=properties
         )
 
-    def pop(self):
-        """Pop an url"""
-        method_frame, header, url = self.basic_get(queue=self.key)
-        delivery_tag = method_frame.delivery_tag\
-                if hasattr(method_frame, 'delivery_tag')\
-                else None
-        return url, delivery_tag
+    def connect(self):
+        """Make a connection"""
+        if self.server:
+            try:
+                self.server.close()
+            except:
+                pass
+        self.server = connection.connect(self.connection_url)
+        self.channel = connection.get_channel(self.server, self.key)
+
+    def clear(self):
+        """Clear queue/stack"""
+        self.channel.queue_purge(self.key)
 
 __all__ = ['SpiderQueue']
