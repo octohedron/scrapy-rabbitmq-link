@@ -38,15 +38,13 @@ class IQueue(object):
 class RabbitMQQueue(IQueue):
     """Per-spider FIFO queue"""
 
-    def __init__(self, connection_url, spider, key, exchange=None):
+    def __init__(self, connection_url, key, exchange=None):
         """Initialize per-spider RabbitMQ queue.
 
         Parameters:
             connection_url -- rabbitmq connection url
-            spider -- scrapy spider instance
             key -- rabbitmq routing key
         """
-        self.spider = spider
         self.key = key
         self.connection_url = connection_url
         self.server = None

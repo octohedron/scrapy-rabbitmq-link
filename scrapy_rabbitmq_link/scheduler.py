@@ -102,9 +102,9 @@ class RabbitMQScheduler(Scheduler):
                 raise NotImplementedError(msg)
 
         self.spider = spider
-        self.queue = self._make_queue(spider, spider.queue_key)
+        self.queue = self._make_queue(spider.queue_key)
         if hasattr(spider, 'fwd_queue_key'):
-            self.fwd_queue = self._make_queue(spider, spider.fwd_queue_key)
+            self.fwd_queue = self._make_queue(spider.fwd_queue_key)
 
         self.df = BaseDupeFilter()
 
@@ -117,8 +117,8 @@ class RabbitMQScheduler(Scheduler):
         else:
             logger.info("[Scheduler] No items to crawl in %s" % spider.queue_key)
 
-    def _make_queue(self, spider, key):
-        return RabbitMQQueue(self.connection_url, spider, key)
+    def _make_queue(self, key):
+        return RabbitMQQueue(self.connection_url, key)
 
     def on_sigint(self, signal, frame):
         self.closing = True
