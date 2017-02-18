@@ -3,7 +3,6 @@ import sys
 import time
 import pika
 import logging
-from scrapy.http import Request
 
 # module packages
 import connection
