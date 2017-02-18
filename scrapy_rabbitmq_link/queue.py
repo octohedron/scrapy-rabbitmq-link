@@ -75,9 +75,9 @@ class RabbitMQQueue(IQueue):
         return wrapper
 
     @_try_operation
-    def pop(self):
+    def pop(self, no_ack=False):
         """Pop a message"""
-        return self.channel.basic_get(queue=self.key)
+        return self.channel.basic_get(queue=self.key, no_ack=no_ack)
 
     @_try_operation
     def ack(self, delivery_tag):
