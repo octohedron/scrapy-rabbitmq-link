@@ -107,6 +107,10 @@ class RabbitMQQueue(IQueue):
         self.server = connection.connect(self.connection_url)
         self.channel = connection.get_channel(self.server, self.key)
 
+    def close(self):
+	    """Close channel"""
+	    self.channel.close()
+
     def clear(self):
         """Clear queue/stack"""
         self.channel.queue_purge(self.key)
