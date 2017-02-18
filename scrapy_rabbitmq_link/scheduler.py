@@ -4,10 +4,10 @@ import sys
 import time
 import signal
 import logging
-import connection
 
 from scrapy.http import Request
 from scrapy.dupefilters import BaseDupeFilter
+from scrapy_rabbitmq_link import connection
 from scrapy_rabbitmq_link.queue import RabbitMQQueue
 
 # default values

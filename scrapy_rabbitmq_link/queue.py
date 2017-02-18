@@ -5,7 +5,7 @@ import pika
 import logging
 
 # module packages
-import connection
+from scrapy_rabbitmq_link import connection
 
 logger = logging.getLogger(__name__)
 
