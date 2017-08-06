@@ -19,6 +19,10 @@ class RabbitMQMiddleware(object):
     def from_settings(self, settings):
         return RabbitMQMiddleware(settings)
 
+    @classmethod
+    def from_crawler(self, crawler):
+        return RabbitMQMiddleware(crawler.settings)
+
     def ensure_init(self, spider):
         if  self.init:
             self.spider = spider
