@@ -5,9 +5,8 @@ try:
 except ImportError:
     from distutils.core import setup
 
-from codecs import open
 
-if  sys.argv[-1] == 'publish':
+if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
     sys.exit()
 
@@ -17,14 +16,14 @@ packages = [
 
 requires = [
     'pika',
-    'Scrapy>=1.0'
+    'Scrapy>=1.3'
 ]
 
 setup(
     name='scrapy-rabbitmq-link',
     author='Mantas Briliauskas',
-    description='RabbitMQ Plug-in for Scrapy',
-    version='0.2.1',
+    description='RabbitMQ plug-in for Scrapy',
+    version='0.3.0',
     author_email='m.briliauskas@gmail.com',
     license='MIT',
     url='https://github.com/mbriliauskas/scrapy-rabbitmq-link',

@@ -1,8 +1,8 @@
-## A RabbitMQ Scheduler for Scrapy Framework.
+# A RabbitMQ Scheduler for Scrapy Framework.
 
-Scrapy-rabbitmq-link is a tool that lets you feed URLs from RabbitMQ to Scrapy spiders, using the [Scrapy framework](http://doc.scrapy.org/en/latest/index.html).
+scrapy-rabbitmq-link is a library letting you to crawl URLs provided from RabbitMQ queue using [Scrapy framework](http://doc.scrapy.org/en/latest/index.html).
 
-This is a modified version of scrapy-rabbitmq published by Royce Haynes in [GitHub](https://github.com/roycehaynes/scrapy-rabbitmq).
+This project a modified version of scrapy-rabbitmq published by Royce Haynes in [GitHub](https://github.com/roycehaynes/scrapy-rabbitmq).
 
 ## Installation
 
@@ -23,60 +23,52 @@ python setup.py install
 ### Step 1: In your scrapy settings, add the following config values:
 
 ```
-# Enables scheduling storing requests queue in rabbitmq.
-SCHEDULER = "scrapy_rabbitmq_link.scheduler.Scheduler"
+# Enable RabbitMQ scheduler
+SCHEDULER = "scrapy_rabbitmq_link.scheduler.SaaS"
 
-# Don't cleanup rabbitmq queues, allows to pause/resume crawls.
-SCHEDULER_PERSIST = True
+# Provide AMQP connection string
+RABBITMQ_CONNECTION_PARAMETERS = 'amqp://guest:guest@localhost:5672/'
 
-# Schedule requests using a priority queue. (default)
-SCHEDULER_QUEUE_CLASS = 'scrapy_rabbitmq_link.queue.SpiderQueue'
+# Set response status codes to requeue messages on
+SCHEDULER_REQUEUE_ON_STATUS = [500]
 
-# Set expression for RabbitMQ URLs queue key
-SCHEDULER_QUEUE_KEY = '%(spider)s'
-
-# Provide host and port to RabbitMQ daemon
-RABBITMQ_CONNECTION_PARAMETERS = 'amqp://user:pass@host:port/vhost'
-
-# Response status to mark message as acknowledged and remove from queue
-RABBITMQ_ACKNOWLEDGE_ON_RESPONSE_STATUS = [200, 404]
-
-# Set middleware to status a successful remote procedure call
+# Middleware acks RabbitMQ message on success
 DOWNLOADER_MIDDLEWARES = {
     'scrapy_rabbitmq_link.middleware.RabbitMQMiddleware': 999
 }
 
 ```
 
-### Step 2: Add request building methods to Spider : _modify_request and _callback
+### Step 2: Add request building method to Spider : _make_request
 
 #### Example: custom_spider.py
 
+
+
 ```
-from time import time
-from scrapy.spiders import Spider
+import scrapy
 
-class CustomSpider(Spider):
-    """ Make requests using urls from RabbitMQ queue named same as spider
-    """
-    
-    name = 'custom_spider'
 
-    # modify a request before firing. request already contains url received from RabbitMQ
-    def _modify_request(self, request):
-        request.meta['time'] = time()
-        return request
+class CustomSpider(scrapy.Spider):
+    name = 'custom_spider'    
+    amqp_key = 'test_urls'
 
-    # callback to the response received
-    def _callback(self, response):
-        return self.parse(response)
+    def _make_request(self, mframe, hframe, body):
+        url = body.decode()
+        return scrapy.Request(url, callback=self.parse)
 
     def parse(self, response):
-        # extract stuff from response
-        return
-```
+        item = ... # parse item
+        yield item
+
+``` 
+
+`amqp_key` serves as queue name in spider.
+
 
 ### Step 3: Push URLs to RabbitMQ
+
+Push url list to scrape from.
 
 #### Example: push_urls_to_queue.py
 
@@ -89,18 +81,19 @@ connection = pika.BlockingConnection(pika.URLParameters(settings.RABBITMQ_CONNEC
 channel = connection.channel()
 
 # set queue name
-queue = '%(spider)s' % {'spider':'custom'}
+queue_key = 'target_urls'
 
 # publish links to queue
-for url in open('urls.txt'):
-    url = url.strip(' \n\r')
-    channel.basic_publish(exchange='',
-                    routing_key=queue,
-                    body=url,
-                    pika.BasicProperties(
-                        content_type='text/plain',
-                        delivery_mode=1
-                    ))
+with open('urls.txt') as f:
+    for url in f:
+        url = url.strip(' \n\r')
+        channel.basic_publish(exchange='',
+                        routing_key=queue_key,
+                        body=url,
+                        pika.BasicProperties(
+                            content_type='text/plain',
+                            delivery_mode=2
+                        ))
 
 connection.close()
 
@@ -113,18 +106,14 @@ connection.close()
 scrapy crawl custom_spider
 ```
 
+HAPPY SCRAPING !!!
+
+
 ## Contributing and Forking
 
 See [Contributing Guidlines](CONTRIBUTING.MD)
 
-## Releases
-
-See the [changelog](CHANGELOG.md) for release details.
-
-| Version | Release Date |
-| :-----: | :----------: |
-|  0.1.0  | 2016-08-23 |
 
 ## Copyright & License
 
-Copyright for portions of project "scrapy-rabbitmq" are held by Royce Haynes (c) 2014 as part of project "scrapy-rabbitmq-link". All other copyright for project "scrapy-rabbitmq-link" are held by Mantas Briliauskas (c) 2016.
+See [LICENCE](LICENCE)

@@ -1,18 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-Scrapy RabbitMQ
-~~~~~~~~~~~~~~~~~~~~~~
-
-TODO
-
-Usage:
-
-TODO
-
-"""
-
-__title__ = 'scrapy-rabbitmq'
-__version__ = '0.1.0'
-__author__ = 'Royce Haynes'
-__copyright__ = 'Copyright 2014 Royce Haynes'
+__title__ = 'scrapy-rabbitmq-link'
+__version__ = '0.2.2'
+__author__ = 'Mantas Briliauskas'
+__copyright__ = 'Copyright 2017 Mantas Briliauskas'
