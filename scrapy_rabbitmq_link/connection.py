@@ -6,7 +6,7 @@ def get_channel(connection, queue_name):
     """ Init method to return a prepared channel for consuming
     """
     channel = connection.channel()
-    channel.queue_declare(queue=queue_name, durable=True)
+    channel.queue_declare(queue=queue_name, durable=False)
     channel.confirm_delivery()
 
     return channel
